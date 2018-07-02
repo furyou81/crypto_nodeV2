@@ -234,6 +234,7 @@ port.on("open", function () { // quand la connexion UART se fait
 		buf += data; // on concatene les datas au fur et a mesure qu'on les recoit dans un buffer
 		console.log("BUF:" + buf);
 		
+		check_transaction_status(buf);
 		check_error(buf);
 		reset(buf);
 		/********** TRANSACTION ***********/  
@@ -294,12 +295,14 @@ port.on("open", function () { // quand la connexion UART se fait
 
 console.log("test");
 
-ev.on('transaction', function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
+ev.on('transaction', async function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
 	console.log(message + amount + private_key);
-	fs.readFile('seller_account.txt', function(err, data) {
+	if (i == 1)
+	await fs.readFile('seller_account.txt', function(err, data) {
+		console.log('amount ==== ' + amount);
 		send_eth(private_key, get_seller_public_key(data.toString('ascii')), amount); 
 	});
-	reset('reset');
+	i++;
 	//end_transaction(); // fin de la transaction, on reset les variables pour se preparer a la prochaine transaction
 });
 
@@ -339,7 +342,6 @@ function send_eth(from, to, amount) {
 				console.log;
 				transaction_status = 'transaction success';
 				if (j == 1)
-
 					port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
 						console.log('transaction success');
 						j++;
