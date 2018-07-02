@@ -16,6 +16,7 @@ var dateTime = require('node-datetime');
 var buf = "";
 var amount = null;
 var private_key = null;
+var public_key = null;
 var k1 =  null;
 var k2 = null;
 var k3 = null;
@@ -30,6 +31,8 @@ var new_seller_private_key = null;
 var new_seller_public_key = null;
 var i = 1;
 var j = 1;
+var timeoutScheduled = null;
+var refund = 0;
 /***************************************************************************************************************
  * checking that the amount of the transaction has been sent to the Raspberry pi with the format {amount:11111}*
  * return the amount or null if no amount was received                                                         *
@@ -67,6 +70,50 @@ function check_private_key(pkey) {
 		console.log("OK");
 	}
 }
+
+function check_public_key(pkey) {
+	var k = pkey.match(/Block   4 : ([0-9 ABCDEF]{47})/);
+	if (k != null)
+		k3 = k[1]; // on recupere la premiere partie de la cle privee qui est stockee dans le block 2
+	k = null;
+	k = pkey.match(/Block   5 : ([0-9 ABCDEF]{47})/);
+	if (k != null)
+		k4 = k[1]; // on recupere la deuxieme partie de la cle privee qui est stockee dans le block 4
+	console.log("TEST" + k3 + k4 + "/" + amount + "/");
+	if (k3 != null && k4 != null)
+	{
+		console.log('BLOCK 5 = ' + (k4.replace(/\s/g, '')).substring(0, 7));
+		public_key = k3.replace(/\s/g, '') + (k4.replace(/\s/g, '')).substring(0, 8); // on supprime les espaces et on assemble les deux parties de la cle
+
+		console.log("OK");
+	}
+}
+
+
+function check_start(b) {
+	let pos = b.search('Block');
+	console.log("POS = " + pos);
+	if (pos >= 0)
+	{
+		if (timeoutScheduled == null)
+		{
+		timeoutScheduled = Date.now();
+		setTimeout(() => {
+			  delay = Date.now() - timeoutScheduled;
+			if (private_key == null && public_key == null)
+			{
+				transaction_status = 'communication failed';
+			port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
+			console.log('transaction confirmation' + transaction_status);
+			buf = "";
+		});
+			  	console.log(`${delay}ms have passed since I was scheduledOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO`);
+				;}
+		}, 5000);
+		}
+	}
+}
+
 
 function get_seller_private_key(pkey) {
 	var k = pkey.match(/{private_key:([0-9 xabcdefXABCDEF]*)}/);
@@ -142,6 +189,22 @@ function start_transaction(b) {
 	}
 }
 
+function start_refund(b) {
+	let pos = b.search('refund');
+	console.log("POS = " + pos);
+	if (refund == 0 && pos >= 0)
+	{
+		amount = null;
+		private_key = null;
+		k1 = null;
+		k2 = null;
+		k3 = null;
+		k4 = null;
+		refund = 1;
+	}
+}
+
+
 function end_transaction() {
 	started = 0; // transaction not started
 	buf = ""; // clear the buffer
@@ -168,6 +231,9 @@ function reset(b) {
 		new_seller_public_key = null;
 		i = 1;
 		j = 1;
+		timeoutScheduled = null;
+		public_key = null;
+		refund = 0;
 	}
 }
 
@@ -243,7 +309,8 @@ port.on("open", function () { // quand la connexion UART se fait
 	port.on('data', function(data) { // on commence a ecouter les datas qu'on recoit
 		buf += data; // on concatene les datas au fur et a mesure qu'on les recoit dans un buffer
 		console.log("BUF:" + buf);
-		
+	
+		check_start(buf);
 		check_transaction_status(buf);
 		check_error(buf);
 		get_date(buf);
@@ -260,6 +327,21 @@ port.on("open", function () { // quand la connexion UART se fait
 		console.log("STARTED=" + started + " KEY=" + private_key + " AMOUNT= " + amount);
 		if (started == 1 && amount != null && private_key != null)
 			ev.emit('transaction', 'new transaction'); // quand on a recupere toute les infos nous permettant d'effectuer la transaction on lance un nouvel evenement
+
+		/********** REFUND ***********/  
+		console.log("refund = " + refund);
+		start_refund(buf);
+		if (refund == 1) { // si la transaction a commence on va recuperer les infos
+			var tmp = check_amount(buf); // on recupere le montant de la transaction
+			if (tmp != null)
+				amount = tmp;
+			check_public_key(buf); // on recupere la cle privee
+		}
+		console.log("REFUND=" + started + " KEY=" + public_key + " AMOUNT= " + amount);
+		if (refund == 1 && amount != null && public_key != null)
+			ev.emit('refund', 'new refund'); // quand on a recupere toute les infos nous permettant d'effectuer la transaction on lance un nouvel evenement
+
+
 
 		/********* CUSTOMER ACCOUNT CREATION ***********/
 		if (creating_customer_account == 0)
@@ -311,11 +393,23 @@ ev.on('transaction', async function(message) { // evenement qui est lance lorsqu
 	if (i == 1)
 	await fs.readFile('seller_account.txt', function(err, data) {
 		console.log('amount ==== ' + amount);
-		send_eth(private_key, get_seller_public_key(data.toString('ascii')), amount); 
+		send_eth('0x' + private_key, get_seller_public_key(data.toString('ascii')), amount); 
 	});
 	i++;
 	//end_transaction(); // fin de la transaction, on reset les variables pour se preparer a la prochaine transaction
 });
+
+ev.on('refund', async function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
+	console.log(message + amount + public_key);
+	if (i == 1)
+	await fs.readFile('seller_account.txt', function(err, data) {
+		console.log('amount ==== ' + amount);
+		send_eth(get_seller_private_key(data.toString('ascii')), '0x' + public_key, amount); 
+	});
+	i++;
+	//end_transaction(); // fin de la transaction, on reset les variables pour se preparer a la prochaine transaction
+});
+
 
 if (amount != null && private_key != null) {
 	console.log("amount:" + amount + " private_key:" + private_key);
@@ -346,7 +440,7 @@ function send_eth(from, to, amount) {
 		to: to,
 		value: web3.utils.toWei(amount, "ether"),
 		gas: 21000
-	}, '0x' + from)
+	}, from)
 		.then(r => {
 			console.log(r.rawTransaction);
 			web3.eth.sendSignedTransaction(r.rawTransaction).on('receipt', r => {
