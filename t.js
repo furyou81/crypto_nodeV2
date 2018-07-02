@@ -85,35 +85,45 @@ function get_seller_public_key(pkey) {
 }
 
 
-function check_transaction_status(b) {
+async function check_transaction_status(b) {
 	let pos = b.search('check_transaction');
 	console.log("POS = " + pos);
 	if (pos >= 0)
 	{
-		port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
+		await port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
 			console.log('transaction confirmation' + transaction_status);
+			buf = "";
 		});
 	}
 }
 
-function check_error(b) {
+async function check_error(b) {
 	let pos = b.search('ERR');
 	console.log("POS = " + pos);
 	if (pos >= 0)
 	{
 		transaction_status = 'transaction failed';
-		port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
+		await port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
 			console.log('transaction failed');
+			buf = "";
 		});
 	}
 }
 
-function get_date(b) {
+async function get_date(b) {
 	let pos = b.search('date');
 	console.log("POS = " + pos);
 	if (pos >= 0)
 	{
 		var dt = dateTime.create();
+		dt.offsetInHours(2);
+		var formattedDate = dt.format('d/m/y H:M:S');
+		console.log(formattedDate);
+		await port.write(Buffer.from(' ' + formattedDate + '  ' + '\0'), function(err, results) {
+			console.log('date send: ' + formattedDate);
+			buf = "";
+		});
+
 	}
 }
 
@@ -236,6 +246,7 @@ port.on("open", function () { // quand la connexion UART se fait
 		
 		check_transaction_status(buf);
 		check_error(buf);
+		get_date(buf);
 		reset(buf);
 		/********** TRANSACTION ***********/  
 		console.log("started = " + started);
