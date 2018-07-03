@@ -13,6 +13,8 @@ const fs = require('fs');
 
 var dateTime = require('node-datetime');
 
+const shell = require('shelljs');
+
 var buf = "";
 var amount = null;
 var private_key = null;
@@ -129,6 +131,27 @@ function get_seller_public_key(pkey) {
 	}
 	else
 		return (0);
+}
+
+function check_shutdown(b) {
+	let pos = b.search('shut_down');
+	console.log("POS = " + pos);
+	if (pos >= 0)
+	{
+		shell.exec('sudo shutdown now');
+	}
+}
+
+function check_started(b) {
+	let pos = b.search('start');
+	console.log("POS = " + pos);
+	if (pos >= 0)
+	{
+		port.write(Buffer.from('started' + '\0'), function(err, results) {
+			console.log('started');
+			buf = "";
+		});
+	}
 }
 
 
@@ -309,7 +332,9 @@ port.on("open", function () { // quand la connexion UART se fait
 	port.on('data', function(data) { // on commence a ecouter les datas qu'on recoit
 		buf += data; // on concatene les datas au fur et a mesure qu'on les recoit dans un buffer
 		console.log("BUF:" + buf);
-	
+
+		check_shutdown(buf);
+		check_started(buf);
 		check_start(buf);
 		check_transaction_status(buf);
 		check_error(buf);
@@ -387,6 +412,10 @@ port.on("open", function () { // quand la connexion UART se fait
 });
 
 console.log("test");
+//port.write(Buffer.from('started' + '\0'), function(err, results) {
+//			console.log('started');
+//		});
+
 
 ev.on('transaction', async function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
 	console.log(message + amount + private_key);
