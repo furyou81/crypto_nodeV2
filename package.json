@@ -1,0 +1,23 @@
+{
+  "name": "crypto",
+  "version": "0.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "node-datetime": "^2.0.6",
+    "raspi": "^5.0.2",
+    "raspi-serial": "^5.0.0",
+    "serialport": "^6.2.0",
+    "shelljs": "^0.8.2",
+    "web3": "^1.0.0-beta.34",
+    "web3-eth-accounts": "^1.0.0-beta.34"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -124,6 +124,7 @@ function get_seller_private_key(pkey) {
 }
 
 function get_seller_public_key(pkey) {
+	console.log("key" + pkey);
 	var k = pkey.match(/{public_key:([0-9 xabcdefXABCDEF]*)}/);
 	if (k != null) {
 		console.log('getting seller public key: ' + k[1]);
@@ -158,7 +159,7 @@ function check_started(b) {
 async function check_transaction_status(b) {
 	let pos = b.search('check_transaction');
 	console.log("POS = " + pos);
-	if (pos >= 0)
+	if (pos >= 0 && transaction_status != "")
 	{
 		await port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
 			console.log('transaction confirmation' + transaction_status);
@@ -398,7 +399,7 @@ port.on("open", function () { // quand la connexion UART se fait
 				console.log(account);
 				new_seller_private_key = (account.privateKey).substring(2);
 				new_seller_public_key = (account.address).substring(2);
-				fs.writeFile('seller_account.txt', '{private_key:0x' + new_seller_private_key + '}{public_key:0x' + new_seller_public_key + '}', 'ascii', function (){ console.log('seller account saved to raspberry'); });
+				fs.writeFile('/home/pi/crypto_node/crypto/seller_account.txt', '{private_key:0x' + new_seller_private_key + '}{public_key:0x' + new_seller_public_key + '}', 'ascii', function (){ console.log('seller account saved to raspberry'); });
 			}
 		}
 		if (creating_seller_account == 1)
@@ -420,8 +421,10 @@ console.log("test");
 ev.on('transaction', async function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
 	console.log(message + amount + private_key);
 	if (i == 1)
-	await fs.readFile('seller_account.txt', function(err, data) {
+	await fs.readFile('/home/pi/crypto_node/crypto/seller_account.txt', function(err, data) {
+		console.error(err);
 		console.log('amount ==== ' + amount);
+		console.log(data.toString('ascii'));
 		send_eth('0x' + private_key, get_seller_public_key(data.toString('ascii')), amount); 
 	});
 	i++;
@@ -431,7 +434,7 @@ ev.on('transaction', async function(message) { // evenement qui est lance lorsqu
 ev.on('refund', async function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
 	console.log(message + amount + public_key);
 	if (i == 1)
-	await fs.readFile('seller_account.txt', function(err, data) {
+	await fs.readFile('home/pi/crypto_node/crypto/seller_account.txt', function(err, data) {
 		console.log('amount ==== ' + amount);
 		send_eth(get_seller_private_key(data.toString('ascii')), '0x' + public_key, amount); 
 	});
@@ -474,13 +477,16 @@ function send_eth(from, to, amount) {
 			console.log(r.rawTransaction);
 			web3.eth.sendSignedTransaction(r.rawTransaction).on('receipt', r => {
 				console.log;
-				transaction_status = 'transaction success';
 				if (j == 1)
+				{
+					transaction_status = 'transaction success';
+					console.log("transaction complete");
 					port.write(Buffer.from(transaction_status + '\0'), function(err, results) {
 						console.log('transaction success');
 						j++;
 					})
 						.catch(console.log("fail"))
+				}
 			})
 				.catch( r => { console.log("error");
 					transaction_status = 'transaction fail';
