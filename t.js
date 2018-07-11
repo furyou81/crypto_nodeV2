@@ -140,6 +140,21 @@ function check_shutdown(b) {
 	if (pos >= 0)
 	{
 		shell.exec('sudo shutdown now');
+		buf="";
+	}
+}
+
+function check_hotspot(b) {
+	let pos = b.search('hotspot');
+	console.log("POS = " + pos);
+	if (pos >= 0)
+	{
+		shell.exec('sudo sh /home/pi/crypto_nodeV2/hotspot.sh');
+		buf="";
+		port.write(Buffer.from('connect to CRYPTO on 192.168.220.1 to set wifi network' + '\0'), function(err, results) {
+			console.log('going through hotspot mode');
+		});
+
 	}
 }
 
@@ -339,6 +354,7 @@ port.on("open", function () { // quand la connexion UART se fait
 		check_start(buf);
 		check_transaction_status(buf);
 		check_error(buf);
+		check_hotspot(buf);
 		get_date(buf);
 		reset(buf);
 		/********** TRANSACTION ***********/  

@@ -3,6 +3,8 @@ var url = require('url');
 var querystring = require('querystring'); // recupere params GET
 var EventEmitter = require('events').EventEmitter; // pour emettre ses propres evenements
 
+const fs = require('fs');
+
 var jeu = new EventEmitter();
 
 // on demarre le server http
@@ -46,6 +48,7 @@ var server = http.createServer(function(req, res) {
 			'<button onclick="setWifi();"> OK </button>' +
 			'</body>' +
 			'<script>' +
+			'const fs = require("fs");' +
 			'function setWifi() {' +
 			'let name = document.getElementById("wifi_name").value;' +
 			'let psw = document.getElementById("wifi_psw").value;' +
