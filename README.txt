@@ -18,3 +18,9 @@ sudo apt install libapache2-mod-php
 
 ADD www-data in root group
 www-data ALL=(ALL) NOPASSWD: ALL
+
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install hostapd
+sudo apt-get install dnsmasq
+chmod 777 /etc/wpa_supplicant/wpa_supplicant.conf
