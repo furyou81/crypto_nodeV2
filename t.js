@@ -415,7 +415,7 @@ port.on("open", function () { // quand la connexion UART se fait
 				console.log(account);
 				new_seller_private_key = (account.privateKey).substring(2);
 				new_seller_public_key = (account.address).substring(2);
-				fs.writeFile('/home/pi/crypto_node/crypto/seller_account.txt', '{private_key:0x' + new_seller_private_key + '}{public_key:0x' + new_seller_public_key + '}', 'ascii', function (){ console.log('seller account saved to raspberry'); });
+				fs.writeFile('/home/pi/crypto_nodeV2/seller_account.txt', '{private_key:0x' + new_seller_private_key + '}{public_key:0x' + new_seller_public_key + '}', 'ascii', function (){ console.log('seller account saved to raspberry'); });
 			}
 		}
 		if (creating_seller_account == 1)
@@ -437,7 +437,7 @@ console.log("test");
 ev.on('transaction', async function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
 	console.log(message + amount + private_key);
 	if (i == 1)
-	await fs.readFile('/home/pi/crypto_node/crypto/seller_account.txt', function(err, data) {
+	await fs.readFile('/home/pi/crypto_nodeV2/seller_account.txt', function(err, data) {
 		console.error(err);
 		console.log('amount ==== ' + amount);
 		console.log(data.toString('ascii'));
@@ -450,7 +450,7 @@ ev.on('transaction', async function(message) { // evenement qui est lance lorsqu
 ev.on('refund', async function(message) { // evenement qui est lance lorsqu'une nouvelle transaction peut demarrer = on a recuperer le montant et la cle privee
 	console.log(message + amount + public_key);
 	if (i == 1)
-	await fs.readFile('home/pi/crypto_node/crypto/seller_account.txt', function(err, data) {
+	await fs.readFile('home/pi/crypto_nodeV2/seller_account.txt', function(err, data) {
 		console.log('amount ==== ' + amount);
 		send_eth(get_seller_private_key(data.toString('ascii')), '0x' + public_key, amount); 
 	});
