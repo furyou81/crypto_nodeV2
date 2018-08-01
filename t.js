@@ -149,12 +149,11 @@ function check_hotspot(b) {
 	console.log("POS = " + pos);
 	if (pos >= 0)
 	{
-		shell.exec('sudo sh /home/pi/crypto_nodeV2/hotspot.sh');
-		buf="";
-		port.write(Buffer.from('connect to CRYPTO on 192.168.220.1 to set wifi network' + '\0'), function(err, results) {
+	//	port.write(Buffer.from('connect to CRYPTO on 192.168.220.1 to set wifi network' + '\0'), function(err, results) {
 			console.log('going through hotspot mode');
-		});
-
+			shell.exec('sudo sh /home/pi/crypto_nodeV2/hotspot.sh');
+	//	});
+		buf="";
 	}
 }
 
@@ -345,6 +344,55 @@ async function send_seller_public_key(b) {
 port.on("open", function () { // quand la connexion UART se fait
 	console.log('open');
 
+
+//	port.write(Buffer.from('raspberry' + '\0'), function(err, results) {
+//			console.log('raspberry starting');
+//		});
+
+shell.exec('sudo cat /etc/network/interfaces', function(code, stdout, stderr) {
+		  console.log('Exit code:', code);
+		  console.log('Program output:', stdout);
+		  console.log('Program stderr:', stderr);
+		  let pos1 = stdout.search('192.168.220.1');
+
+		  if (pos1 < 0) {
+		  	shell.exec('sudo ping -c 1 www.google.fr', function(code, stdout, stderr) {
+		  	console.log('Exit code:', code);
+		  	console.log('Program output:', stdout);
+		  	console.log('Program stderr:', stderr);
+		  	let pos = stdout.search('PING');
+			if (pos >= 0) {
+				port.write(Buffer.from('ok' + '\0'), function(err, results) {
+				console.log('raspberry starting');
+				});
+			}
+			else {
+				port.write(Buffer.from('ERROR' + '\0'), function(err, results) {
+				console.log('raspberry no wifi');
+				});
+			}
+			});
+		  }
+	});
+/*
+	shell.exec('sudo ping www.google.fr', function(code, stdout, stderr) {
+		  console.log('Exit code:', code);
+		  console.log('Program output:', stdout);
+		  console.log('Program stderr:', stderr);
+		  let pos = stdout.search('PING');
+		if (pos >= 0) {
+			port.write(Buffer.from('ok' + '\0'), function(err, results) {
+				console.log('raspberry starting');
+			});
+		}
+		else {
+			port.write(Buffer.from('ERROR' + '\0'), function(err, results) {
+			console.log('raspberry no wifi');
+		});
+		}
+	});
+*/
+
 	port.on('data', function(data) { // on commence a ecouter les datas qu'on recoit
 		buf += data; // on concatene les datas au fur et a mesure qu'on les recoit dans un buffer
 		console.log("BUF:" + buf);
@@ -475,9 +523,20 @@ if (amount != null && private_key != null) {
 function get_balance(add) {
 	web3.eth.getBalance(add, function(error, result) {
 		if (!error)
-			console.log('Ether: ', web3.utils.fromWei(result, 'ether'));
+		{
+			let bal = web3.utils.fromWei(result, 'ether');
+			console.log('Ether: ', bal);
+			port.write(bal + '\0', function(err, results) {
+						reset('reset');
+					});
+		}
 		else
+		{
 			console.log('An error occured somewhere');
+			port.write('An error occured somehere' + '\0', function(err, results) {
+						reset('reset');
+					});
+		}
 	});
 }
 
