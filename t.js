@@ -33,6 +33,8 @@ var new_seller_private_key = null;
 var new_seller_public_key = null;
 var i = 1;
 var j = 1;
+var balance_customer = 0;
+var balance_seller = 0;
 var timeoutScheduled = null;
 var refund = 0;
 /***************************************************************************************************************
@@ -141,6 +143,24 @@ function check_shutdown(b) {
 	{
 		shell.exec('sudo shutdown now');
 		buf="";
+	}
+}
+
+function start_balance_customer(b) {
+	let pos = b.search('balance_customer');
+	console.log("POS = " + pos);
+	if (pos >= 0)
+	{
+		balance_customer = 1;
+	}
+}
+
+function start_balance_seller(b) {
+	let pos = b.search('balance_seller');
+	console.log("POS = " + pos);
+	if (pos >= 0)
+	{
+		balance_seller = 1;
 	}
 }
 
@@ -269,6 +289,8 @@ function reset(b) {
 		new_seller_public_key = null;
 		i = 1;
 		j = 1;
+		balance_customer = 0;
+		balance_seller = 0;
 		timeoutScheduled = null;
 		public_key = null;
 		refund = 0;
@@ -430,6 +452,29 @@ shell.exec('sudo cat /etc/network/interfaces', function(code, stdout, stderr) {
 		console.log("REFUND=" + started + " KEY=" + public_key + " AMOUNT= " + amount);
 		if (refund == 1 && amount != null && public_key != null)
 			ev.emit('refund', 'new refund'); // quand on a recupere toute les infos nous permettant d'effectuer la transaction on lance un nouvel evenement
+
+
+		/*** CHECK BALANCE CUSTOMER **/
+		start_balance_customer(buf);
+		if (balance_customer == 1) { // si la transaction a commence on va recuperer les infos
+			check_public_key(buf); // on recupere la cle privee
+		}
+		console.log("CHECK BALANCE=" + balance_customer + " KEY=" + public_key);
+		if (balance_customer == 1 && public_key != null)
+			get_balance("0x" + public_key);
+
+		/*** CHECK BALANCE SELLER **/
+		start_balance_seller(buf);
+		if (balance_seller == 1) { // si la transaction a commence on va recuperer les infos
+			console.log("CHECK BALANCE SELLER=" + balance_seller);
+			fs.readFile('/home/pi/crypto_nodeV2/seller_account.txt', function(err, data) {
+				console.error(err);
+				console.log(data.toString('ascii'));
+				get_balance(get_seller_public_key(data.toString('ascii'))); 
+			});
+		}
+
+
 
 
 
